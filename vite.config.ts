@@ -26,6 +26,15 @@ export default defineConfig({
   build: {
     outDir: r("./dist/client"),
     emptyOutDir: true,
-    chunkSizeWarningLimit: 900,
+    chunkSizeWarningLimit: 700,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ["react", "react-dom", "react-router"],
+          charts: ["recharts"],
+          ui: ["@radix-ui/react-dialog", "@radix-ui/react-alert-dialog", "@radix-ui/react-select", "@radix-ui/react-tabs", "@tanstack/react-query", "lucide-react"],
+        },
+      },
+    },
   },
 });

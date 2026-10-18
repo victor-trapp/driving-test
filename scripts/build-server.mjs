@@ -10,6 +10,8 @@ await rm("dist/server", { recursive: true, force: true });
 await build({
   entryPoints: ["server/src/index.ts", "server/src/db/cli.ts"],
   outdir: "dist/server",
+  // Flat output so index.js and cli.js both sit next to the drizzle/ migrations folder.
+  entryNames: "[name]",
   bundle: true,
   platform: "node",
   target: "node22",

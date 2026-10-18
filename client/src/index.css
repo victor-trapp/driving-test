@@ -1,0 +1,159 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+  Palette taken from British road furniture: traffic-sign blue, warning yellow,
+  L-plate red, on warm paper in light mode and asphalt in dark mode.
+  Chart and status colours were checked with the dataviz palette validator
+  (light against #FFFFFF, dark against #1A1D21).
+*/
+:root {
+  --background: #f5f3ee;
+  --surface: #ffffff;
+  --surface-2: #eeebe4;
+  --surface-3: #e3dfd5;
+  --foreground: #15181c;
+  --muted: #5a5f67;
+  --border: #dcd7cc;
+  --border-strong: #c4beb1;
+  --primary: #1d4f9c;
+  --primary-hover: #173f7d;
+  --primary-foreground: #ffffff;
+  --primary-soft: #e2e9f5;
+  --accent: #f2c300;
+  --accent-foreground: #1a1a1a;
+  --lplate: #d4351c;
+  --success: #1e7f4f;
+  --success-soft: #e1f0e7;
+  --danger: #b3261e;
+  --danger-soft: #f7e2df;
+  --warning: #8f5400;
+  --warning-soft: #faeed6;
+  --chart-1: #1f5fbf;
+  --chart-grid: #e6e2d8;
+  --chart-pass: #1e7f4f;
+  --chart-fail: #c2410c;
+  --road: #3a3f45;
+  --shadow: 0 1px 2px rgb(21 24 28 / 0.06), 0 1px 1px rgb(21 24 28 / 0.04);
+  color-scheme: light;
+}
+
+.dark {
+  --background: #111315;
+  --surface: #1a1d21;
+  --surface-2: #22262b;
+  --surface-3: #2b3036;
+  --foreground: #ecedee;
+  --muted: #a0a6ae;
+  --border: #2f343a;
+  --border-strong: #3d434a;
+  --primary: #8eb3f5;
+  --primary-hover: #a9c5f8;
+  --primary-foreground: #0e1a2e;
+  --primary-soft: #1c283b;
+  --accent: #f2c300;
+  --accent-foreground: #1a1a1a;
+  --lplate: #e8553d;
+  --success: #4cc38a;
+  --success-soft: #15291e;
+  --danger: #ff7a70;
+  --danger-soft: #361a18;
+  --warning: #f0b44c;
+  --warning-soft: #30250f;
+  --chart-1: #4f82db;
+  --chart-grid: #2a2f35;
+  --chart-pass: #2e9b68;
+  --chart-fail: #d9693a;
+  --road: #2a2e33;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --font-sans: "Atkinson Hyperlegible Next Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-lplate: var(--lplate);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-ring: var(--primary);
+  --shadow-card: var(--shadow);
+  --radius-card: 10px;
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+  }
+  :focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: var(--accent);
+    color: var(--accent-foreground);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-rise {
+  animation: rise 220ms ease-out both;
+}
+
+/* Hide number spinners on numeric inputs */
+input[type="number"]::-webkit-inner-spin-button {
+  appearance: none;
+}

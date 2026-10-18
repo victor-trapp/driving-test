@@ -53,6 +53,7 @@ export function topicStats(db: Db, profileId: number) {
     const done = lessons.filter((l) => l.topicId === t.id).map((l) => l.lessonId);
     const lessonsDone = t.lessons.filter((l) => done.includes(l.id)).length;
     const quizPassed = Boolean(q?.passed);
+    const next = t.lessons.find((l) => !done.includes(l.id));
     return {
       id: t.id,
       number: t.number,
@@ -62,6 +63,7 @@ export function topicStats(db: Db, profileId: number) {
       lessonsTotal: t.lessons.length,
       lessonsDone,
       completedLessons: done,
+      nextLesson: next ? { id: next.id, title: next.title } : null,
       bankSize: bank.find((b) => b.topic === t.id)?.n ?? 0,
       answered: a?.answered ?? 0,
       correct: a?.correct ?? 0,

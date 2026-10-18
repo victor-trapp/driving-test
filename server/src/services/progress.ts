@@ -138,7 +138,7 @@ function suggest(topics: TopicStats[], n: { answered: number; mistakes: number; 
     return { kind: "lesson", title: `Start with ${next.topic.title}`, reason: "Work through the lessons first, then practise the questions for each topic.", href: `/learn/${next.topic.id}/${next.lesson.id}` };
   }
   if (n.mistakes >= 10) {
-    return { kind: "mistakes", title: "Review your mistakes", reason: `You have ${n.mistakes} questions you last got wrong. Clearing them is the quickest way to improve.`, href: "/practice/mistakes" };
+    return { kind: "mistakes", title: "Review your mistakes", reason: `You have ${n.mistakes} questions you last got wrong. Clearing them is the quickest way to improve.`, href: "/mistakes" };
   }
   const weak = topics.filter((t) => t.answered >= MIN_FOR_RANKING && (t.accuracy ?? 100) < 70).sort((a, b) => a.accuracy! - b.accuracy!)[0];
   if (weak) {

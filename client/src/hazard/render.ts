@@ -69,7 +69,6 @@ function geometry(s: Scenario) {
   return { lw, ourLeft, ourRight, oppLeft, oppRight, res, hs, roadLeft, roadRight, pave };
 }
 
-type Geo = ReturnType<typeof geometry>;
 
 const PALETTE = {
   day: { skyTop: "#8fb6e0", skyBottom: "#dfe8ef", haze: "rgba(225,232,238,0.55)" },
