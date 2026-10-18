@@ -43,7 +43,8 @@ export const HAZARD_CLIPS: HazardClip[] = [
       weather: "clear",
       road: { lanesWith: 1, lanesAgainst: 1, laneWidth: 3.3, centreLine: "none", pavement: true },
       egoLane: 0,
-      egoOffset: [{ t: 0, dx: 0.8 }],
+      // Parked cars fill the left side, so the camera car drives near the middle.
+      egoOffset: [{ t: 0, dx: 1.6 }],
       egoSpeed: [
         { t: 0, v: 9 }, { t: 12800, v: 9 }, { t: 15500, v: 0 }, { t: 19500, v: 0 }, { t: 23000, v: 9 }, { t: 28000, v: 9 },
       ],
@@ -189,7 +190,7 @@ export const HAZARD_CLIPS: HazardClip[] = [
       weather: "clear",
       road: { lanesWith: 1, lanesAgainst: 1, laneWidth: 3.4, centreLine: "broken", pavement: true },
       egoLane: 0,
-      egoOffset: [{ t: 0, dx: 0.8 }, { t: 21000, dx: 0.8 }, { t: 23000, dx: 3.1 }, { t: 28000, dx: 3.1 }],
+      egoOffset: [{ t: 0, dx: 1.5 }, { t: 21000, dx: 1.5 }, { t: 23000, dx: 3.4 }, { t: 28000, dx: 3.4 }],
       egoSpeed: [{ t: 0, v: 10 }, { t: 5500, v: 10 }, { t: 8000, v: 5 }, { t: 11000, v: 5 }, { t: 12500, v: 2.5 }, { t: 15500, v: 5 }, { t: 22000, v: 9 }, { t: 28000, v: 9 }],
       actors: [
         { id: "cyclist", kind: "cyclist", color: "#f2b632", path: [{ t: 0, x: -1.0, z: 50 }, { t: 12200, x: -1.0, z: 111 }, { t: 13200, x: -0.1, z: 116 }, { t: 15500, x: -0.1, z: 127.5 }, { t: 16800, x: -1.0, z: 134 }, { t: 28000, x: -1.0, z: 190 }] },
@@ -288,7 +289,7 @@ export const HAZARD_CLIPS: HazardClip[] = [
       egoLane: 0,
       egoSpeed: [{ t: 0, v: 12 }, { t: 11500, v: 12 }, { t: 14500, v: 1 }, { t: 17000, v: 1 }, { t: 20000, v: 10 }, { t: 26000, v: 10 }],
       actors: [
-        { id: "ped", kind: "pedestrian", color: "#22262b", path: [{ t: 0, x: 5.2, z: 165 }, { t: 10800, x: 5.2, z: 165 }, { t: 12300, x: 1.5, z: 165.5 }, { t: 15800, x: -4.8, z: 166 }, { t: 17000, x: -5.5, z: 166 }], facing: "left" },
+        { id: "ped", kind: "pedestrian", color: "#454b55", path: [{ t: 0, x: 5.2, z: 165 }, { t: 10800, x: 5.2, z: 165 }, { t: 12300, x: 1.5, z: 165.5 }, { t: 15800, x: -4.8, z: 166 }, { t: 17000, x: -5.5, z: 166 }], facing: "left" },
         oncoming("on1", 1.65, 320, 1500, 11, "#cfcfcf"),
       ],
       scenery: [
@@ -297,7 +298,6 @@ export const HAZARD_CLIPS: HazardClip[] = [
         ...lamps("left", 15, 300, 36),
         ...lamps("right", 33, 300, 36),
         ...parked("right", [70, 77, 120, 127, 210]),
-        ...parked("left", [95, 140, 230]),
       ],
     },
   },
