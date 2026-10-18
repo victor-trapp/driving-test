@@ -11,6 +11,7 @@ What's in it:
 - **Mock tests**: 50 questions, 57 minutes, pass mark 43, the same as the real test. Flag questions, change answers, question grid, auto-submit when time runs out, then a full review with a topic breakdown.
 - **Hazard perception**: 10 animated practice clips (11 developing hazards, one clip has two) scored 5 to 1 like the real thing, including the zero score for pattern clicking. Licensed MP4 clips can be added later.
 - **Road signs**: 175 official DfT sign images plus road markings, searchable, with flashcards that track which ones you didn't know.
+- **Pedestrian crossings**: a page for each type (zebra, parallel, pelican, puffin, toucan, equestrian and school crossing patrols) with a labelled drawing, how to spot it, what you must do as a driver, and the light sequences side by side.
 - **Progress**: streak, daily activity, accuracy over time, mock history, weak and strong topics, and an estimated readiness score.
 - Bookmarks, a "review my mistakes" mode, light and dark themes, and backup, restore and import in Settings.
 

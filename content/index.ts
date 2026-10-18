@@ -54,3 +54,4 @@ export const TOTAL_LESSONS = TOPICS.reduce((n, t) => n + t.lessons.length, 0);
 export type { TopicId };
 export { SIGNS, SIGN_CATEGORIES, SIGN_ATTRIBUTION, signById } from "./signs";
 export { HAZARD_CLIPS, clipById } from "./hazard-clips";
+export { CROSSINGS, CROSSING_RULES, LIGHT_SEQUENCES } from "./crossings";

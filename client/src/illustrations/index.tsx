@@ -17,7 +17,7 @@ const GREY_CAR = "#8a9099";
 
 const label = { fontFamily: "inherit", fontSize: 12, fill: INK } as const;
 
-function Car({ x, y, angle = 0, color = BLUE, w = 18, h = 34, indicator }: { x: number; y: number; angle?: number; color?: string; w?: number; h?: number; indicator?: "left" | "right" }) {
+export function Car({ x, y, angle = 0, color = BLUE, w = 18, h = 34, indicator }: { x: number; y: number; angle?: number; color?: string; w?: number; h?: number; indicator?: "left" | "right" }) {
   return (
     <g transform={`translate(${x} ${y}) rotate(${angle})`}>
       <rect x={-w / 2} y={-h / 2} width={w} height={h} rx="4" fill={color} />
@@ -29,7 +29,7 @@ function Car({ x, y, angle = 0, color = BLUE, w = 18, h = 34, indicator }: { x: 
   );
 }
 
-function Bike({ x, y, angle = 0 }: { x: number; y: number; angle?: number }) {
+export function Bike({ x, y, angle = 0 }: { x: number; y: number; angle?: number }) {
   return (
     <g transform={`translate(${x} ${y}) rotate(${angle})`}>
       <rect x="-1.5" y="-12" width="3" height="24" rx="1.5" fill="#222" />
@@ -39,7 +39,7 @@ function Bike({ x, y, angle = 0 }: { x: number; y: number; angle?: number }) {
   );
 }
 
-function Person({ x, y, color = ORANGE }: { x: number; y: number; color?: string }) {
+export function Person({ x, y, color = ORANGE }: { x: number; y: number; color?: string }) {
   return (
     <g transform={`translate(${x} ${y})`}>
       <ellipse cx="0" cy="0" rx="7" ry="5" fill={color} />

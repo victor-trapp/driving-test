@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
-import { Layers, Search } from "lucide-react";
+import { Footprints, Layers, Search } from "lucide-react";
 import type { Sign, SignCategory } from "@content/types";
 import { EmptyState, ErrorBlock, LoadingBlock, PageHeader, RefLinks } from "@/components/common";
 import { SignImage } from "@/components/SignImage";
@@ -34,11 +34,18 @@ export default function RoadSigns() {
         title="Road signs"
         description="UK traffic signs and road markings, with what they mean and what to do."
         actions={
-          <Button asChild>
-            <Link to="/road-signs/flashcards">
-              <Layers /> Flashcards
-            </Link>
-          </Button>
+          <>
+            <Button asChild variant="outline">
+              <Link to="/road-signs/crossings">
+                <Footprints /> Pedestrian crossings
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link to="/road-signs/flashcards">
+                <Layers /> Flashcards
+              </Link>
+            </Button>
+          </>
         }
       />
 

@@ -15,6 +15,7 @@ import HazardClipPage from "./pages/HazardClip";
 import HazardRun from "./pages/HazardRun";
 import RoadSigns from "./pages/RoadSigns";
 import Flashcards from "./pages/Flashcards";
+import Crossings from "./pages/Crossings";
 import Progress from "./pages/Progress";
 import Bookmarks from "./pages/Bookmarks";
 import Settings from "./pages/Settings";
@@ -39,6 +40,7 @@ export const router = createBrowserRouter([
       { path: "hazard-perception/:clipId", element: <HazardClipPage /> },
       { path: "road-signs", element: <RoadSigns /> },
       { path: "road-signs/flashcards", element: <Flashcards /> },
+      { path: "road-signs/crossings", element: <Crossings /> },
       { path: "progress", element: <Progress /> },
       { path: "bookmarks", element: <Bookmarks /> },
       { path: "settings", element: <Settings /> },

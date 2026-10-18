@@ -66,3 +66,25 @@ export interface Sign {
   image: { kind: "dft"; file: string } | { kind: "marking"; id: string };
   hc?: HcRef;
 }
+
+export type CrossingId = "zebra" | "parallel" | "pelican" | "puffin" | "toucan" | "equestrian" | "school-patrol";
+
+export interface Crossing {
+  id: CrossingId;
+  name: string;
+  /** Where the name comes from, or what else it's called. */
+  aka?: string;
+  control: "Give way" | "Traffic lights" | "School patrol";
+  users: string;
+  /** How to recognise it. Supports **bold**. */
+  spot: string[];
+  /** What you must or should do as a driver. Supports **bold**. */
+  driver: string[];
+  /** The light sequence drivers see, for signal-controlled crossings. */
+  lights?: "pelican" | "standard";
+  /** The one thing to remember for the test. */
+  remember: string;
+  /** Ids of related signs in the sign library. */
+  signs: string[];
+  refs: HcRef[];
+}

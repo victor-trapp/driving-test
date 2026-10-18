@@ -1,6 +1,6 @@
 // Sanity checks for the bundled content. Run with `npm run content:check`.
 // Pass --links to also check that every external URL responds (needs network).
-import { HAZARD_CLIPS, SEED_QUESTIONS, SIGNS, TOPICS } from "../content/index";
+import { CROSSING_RULES, CROSSINGS, HAZARD_CLIPS, SEED_QUESTIONS, SIGNS, TOPICS } from "../content/index";
 import { TOPIC_IDS } from "../shared/types";
 import { existsSync } from "node:fs";
 
@@ -63,6 +63,16 @@ for (const c of HAZARD_CLIPS) {
   }
 }
 
+// Crossings
+const crossingIds = new Set<string>();
+for (const c of CROSSINGS) {
+  if (crossingIds.has(c.id)) err(`duplicate crossing id ${c.id}`);
+  crossingIds.add(c.id);
+  for (const s of c.signs) if (!signIds.has(s)) err(`crossing ${c.id}: unknown sign ${s}`);
+  if (c.refs.length === 0) err(`crossing ${c.id}: needs at least one reference`);
+  if (c.control === "Traffic lights" && !c.lights) err(`crossing ${c.id}: signal-controlled but no light sequence`);
+}
+
 const byTopic = new Map<string, number>();
 for (const q of SEED_QUESTIONS) byTopic.set(q.topic, (byTopic.get(q.topic) ?? 0) + 1);
 console.log(`topics: ${TOPICS.length}, lessons: ${lessonIds.size}, questions: ${SEED_QUESTIONS.length}, signs: ${SIGNS.length}, clips: ${HAZARD_CLIPS.length}`);
@@ -79,6 +89,8 @@ if (process.argv.includes("--links")) {
     for (const b of l.blocks) if (b.t === "rule" && b.ref) urls.add(b.ref.url.split("#")[0]);
   }
   for (const s of SIGNS) if (s.hc) urls.add(s.hc.url.split("#")[0]);
+  for (const c of CROSSINGS) c.refs.forEach((r) => urls.add(r.url.split("#")[0]));
+  for (const r of CROSSING_RULES) urls.add(r.ref.url.split("#")[0]);
   console.log(`checking ${urls.size} links...`);
   for (const url of urls) {
     try {
