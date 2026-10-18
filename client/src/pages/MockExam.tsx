@@ -12,22 +12,25 @@ import { keys, useInvalidateProgress } from "@/lib/queries";
 import { cn } from "@/lib/utils";
 
 const LETTER_KEYS = ["a", "b", "c", "d", "e", "f"];
+// How long submitting waits for answers still on their way before it goes ahead anyway.
+const SAVE_WAIT_MS = 5000;
 
 export default function MockExam() {
   const { id = "" } = useParams();
   const navigate = useNavigate();
   const qc = useQueryClient();
   const invalidate = useInvalidateProgress();
-  const fetchedAt = useRef(0);
   const mock = useQuery({
     queryKey: keys.mock(id),
-    queryFn: async () => {
-      const r = await api.get<MockState>(`/mock-tests/${id}`);
-      fetchedAt.current = Date.now();
-      return r;
-    },
+    // receivedAt travels with the data so the clock skew is always worked out from the
+    // response it belongs to, even if this copy came from the cache.
+    queryFn: async () => ({ ...(await api.get<MockState>(`/mock-tests/${id}`)), receivedAt: Date.now() }),
     refetchOnWindowFocus: false,
     staleTime: Infinity,
+    // Answers are kept in local state, not in this cache, so a cached copy goes stale as
+    // soon as you answer anything. Drop it when you leave so resuming always loads the
+    // server's current answers and clock.
+    gcTime: 0,
   });
 
   const [answers, setAnswers] = useState<(number[] | null)[]>([]);
@@ -39,6 +42,15 @@ export default function MockExam() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const submitted = useRef(false);
+  // Every write goes through this chain, one at a time and in order. A quick change of
+  // answer can't be overtaken by the request before it, and submitting waits for the last
+  // answer to land instead of racing it.
+  const writes = useRef<Promise<unknown>>(Promise.resolve());
+  const enqueue = useCallback(<T,>(send: () => Promise<T>): Promise<T> => {
+    const next = writes.current.then(send);
+    writes.current = next.catch(() => {});
+    return next;
+  }, []);
 
   const m = mock.data;
 
@@ -57,6 +69,7 @@ export default function MockExam() {
     if (submitted.current) return;
     submitted.current = true;
     setSubmitting(true);
+    await Promise.race([writes.current, new Promise((r) => setTimeout(r, SAVE_WAIT_MS))]);
     try {
       await api.post(`/mock-tests/${id}/submit`);
     } catch (e) {
@@ -77,7 +90,7 @@ export default function MockExam() {
   // Countdown. The server's clock is the source of truth, so correct for any skew.
   useEffect(() => {
     if (!m || m.status !== "in_progress") return;
-    const skew = m.serverNow - fetchedAt.current;
+    const skew = m.serverNow - m.receivedAt;
     const tick = () => {
       const left = m.deadlineAt - (Date.now() + skew);
       setRemaining(Math.max(0, left));
@@ -91,14 +104,14 @@ export default function MockExam() {
   const save = useCallback(
     async (i: number, selected: number[] | null) => {
       try {
-        await api.put(`/mock-tests/${id}/answers/${i}`, { selected });
+        await enqueue(() => api.put(`/mock-tests/${id}/answers/${i}`, { selected }));
         setSaveError(null);
       } catch (e) {
         if (e instanceof ApiError && e.code === "time_up") return void submit();
         setSaveError("Your last answer didn't save. Check the connection, then choose it again.");
       }
     },
-    [id, submit],
+    [id, submit, enqueue],
   );
 
   const move = useCallback(
@@ -106,15 +119,15 @@ export default function MockExam() {
       if (!m) return;
       const next = Math.max(0, Math.min(m.questions.length - 1, i));
       setIndex(next);
-      api.put(`/mock-tests/${id}/position`, { index: next }).catch(() => {});
+      enqueue(() => api.put(`/mock-tests/${id}/position`, { index: next })).catch(() => {});
       window.scrollTo({ top: 0 });
     },
-    [m, id],
+    [m, id, enqueue],
   );
 
   const toggle = useCallback(
     (key: number) => {
-      if (!m) return;
+      if (!m || submitted.current) return;
       const q = m.questions[index];
       const current = answers[index] ?? [];
       let next: number[];
@@ -129,11 +142,12 @@ export default function MockExam() {
   );
 
   const toggleFlag = useCallback(() => {
+    if (submitted.current) return;
     const copy = flags.slice();
     copy[index] = !copy[index];
     setFlags(copy);
-    api.put(`/mock-tests/${id}/flags/${index}`, { flagged: copy[index] }).catch(() => setSaveError("Couldn't save the flag."));
-  }, [flags, index, id]);
+    enqueue(() => api.put(`/mock-tests/${id}/flags/${index}`, { flagged: copy[index] })).catch(() => setSaveError("Couldn't save the flag."));
+  }, [flags, index, id, enqueue]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
