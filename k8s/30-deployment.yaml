@@ -22,6 +22,8 @@ spec:
         app.kubernetes.io/name: driving-theory
     spec:
       automountServiceAccountToken: false
+      # Don't inject *_SERVICE_HOST variables for every Service in the namespace.
+      enableServiceLinks: false
       terminationGracePeriodSeconds: 30
       securityContext:
         runAsNonRoot: true

@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: driving-theory
+  namespace: driving-theory
+  labels:
+    app.kubernetes.io/name: driving-theory
+spec:
+  # The app only ever answers HTTP. It makes no outbound connections (no DNS, no APIs,
+  # nothing loaded from the internet), so all egress is blocked and ingress is limited
+  # to the app port. If the pod were ever compromised it couldn't reach the rest of the
+  # LAN. k3s enforces NetworkPolicy out of the box; on a cluster without a policy
+  # controller this is simply ignored.
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: driving-theory
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # No "from": NodePort traffic, the ingress controller and kubelet probes all need in.
+    - ports:
+        - port: http
+          protocol: TCP
+  egress: []

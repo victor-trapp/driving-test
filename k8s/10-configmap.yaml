@@ -8,3 +8,7 @@ metadata:
 data:
   APP_TIMEZONE: Europe/London
   LOG_REQUESTS: "true"
+  # The app answers to IP addresses and localhost out of the box. Hostnames have to be
+  # listed (comma-separated) to block DNS rebinding. This one matches optional/ingress.yaml;
+  # add your own, e.g. a Tailscale MagicDNS name.
+  ALLOWED_HOSTS: theory.home.arpa
