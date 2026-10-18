@@ -26,7 +26,7 @@
   },
   "dependencies": {
     "better-sqlite3": "^12.11.1",
-    "drizzle-orm": "^0.44.7",
+    "drizzle-orm": "^0.45.4",
     "express": "^5.1.0",
     "helmet": "^8.1.0",
     "zod": "^3.25.76"
@@ -67,6 +67,6 @@
     "tsx": "^4.20.3",
     "typescript": "^5.8.3",
     "vite": "^7.0.4",
-    "vitest": "^3.2.4"
+    "vitest": "^4.1.12"
   }
 }
