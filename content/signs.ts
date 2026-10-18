@@ -21,7 +21,6 @@ export const SIGN_CATEGORIES: { id: SignCategory; title: string; blurb: string }
 const dft = (file: string) => ({ kind: "dft" as const, file });
 const marking = (id: string) => ({ kind: "marking" as const, id });
 const signsRef = page("signs");
-const markingsRef = page("markings");
 
 export const SIGNS: Sign[] = [
   // Warning
