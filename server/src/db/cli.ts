@@ -6,11 +6,12 @@
 //   import-clips <file>     register licensed MP4 hazard clips copied into the media dir
 //   backup <out.db>         write a consistent copy of the database
 import fs from "node:fs";
-import { loadConfig } from "../config";
+import { loadConfig, loadEnvFile } from "../config";
 import { backupTo, openDatabase, runMigrations } from "./client";
 import { importClips, importQuestions, seedContent } from "./seed";
 
 const [command, arg] = process.argv.slice(2);
+loadEnvFile();
 const config = loadConfig();
 const handle = openDatabase(config.databasePath);
 

@@ -1,10 +1,11 @@
 import fs from "node:fs";
-import { loadConfig } from "./config";
+import { loadConfig, loadEnvFile } from "./config";
 import { openDatabase, runMigrations } from "./db/client";
 import { applyPendingRestore } from "./db/restore";
 import { seedContent } from "./db/seed";
 import { createApp } from "./app";
 
+loadEnvFile();
 const config = loadConfig();
 fs.mkdirSync(config.mediaDir, { recursive: true });
 
@@ -20,6 +21,10 @@ console.log(`database ${config.databasePath}: ${seeded.questions} bundled questi
 const app = createApp(handle, config);
 const server = app.listen(config.port, config.host, () => {
   console.log(`UK Driving Theory Hub listening on http://${config.host}:${config.port}`);
+  const loopback = config.host === "localhost" || config.host === "::1" || config.host.startsWith("127.");
+  if (!loopback && !config.adminToken) {
+    console.warn(`Listening on ${config.host} without ADMIN_TOKEN: anyone who can reach this port can download or reset the data. Fine on a trusted network, otherwise set ADMIN_TOKEN.`);
+  }
 });
 
 // Kubernetes sends SIGTERM and waits terminationGracePeriodSeconds. Stop accepting

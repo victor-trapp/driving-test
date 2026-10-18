@@ -7,6 +7,7 @@ import type { Config } from "./config";
 import type { DbHandle } from "./db/client";
 import { errorHandler } from "./http";
 import { apiRouter } from "./routes";
+import { hostGuard, sameOriginWrites } from "./security";
 
 export function createApp(handle: DbHandle, config: Config) {
   const app = express();
@@ -62,7 +63,12 @@ export function createApp(handle: DbHandle, config: Config) {
     }
   });
 
-  app.use("/api", express.json({ limit: "10mb" }), apiRouter(handle, config));
+  app.use(hostGuard(config.allowedHosts));
+  app.use(sameOriginWrites);
+
+  // Question packs can be a few MB; nothing else sent to the API comes close to 100 kB.
+  app.use("/api/admin/import", express.json({ limit: "10mb" }));
+  app.use("/api", express.json({ limit: "100kb" }), apiRouter(handle, config));
 
   // Licensed hazard perception clips live on the data volume.
   app.use("/media", express.static(config.mediaDir, { fallthrough: false, maxAge: "1d" }));

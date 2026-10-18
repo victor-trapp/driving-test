@@ -82,6 +82,9 @@ function clipRow(c: HazardClip, origin: "bundled" | "import", now: number) {
 // ---- Imports -------------------------------------------------------------------------
 
 const hcRef = z.object({ label: z.string().min(1).max(200), url: z.string().url().startsWith("https://") });
+// Packs come from outside, so keep anything that ends up in a URL to plain, safe forms.
+const webUrl = z.string().url().regex(/^https?:\/\//i, "must be an http(s) link");
+const contentRef = z.string().regex(/^[A-Za-z0-9._-]{1,100}$/, "letters, numbers, '.', '-' and '_' only");
 
 export const importedQuestionSchema = z
   .object({
@@ -94,9 +97,9 @@ export const importedQuestionSchema = z
     explanation: z.string().min(1).max(2000),
     hc: z.array(hcRef).default([]),
     image: z
-      .object({ kind: z.enum(["sign", "illustration"]), ref: z.string().min(1).max(100), alt: z.string().max(200) })
+      .object({ kind: z.enum(["sign", "illustration"]), ref: contentRef, alt: z.string().max(200) })
       .optional(),
-    sourceUrl: z.string().url(),
+    sourceUrl: webUrl,
     lastVerified: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     contentVersion: z.number().int().min(1).default(1),
   })
@@ -156,7 +159,7 @@ const clipImportSchema = z.object({
         id: z.string().regex(/^[A-Za-z0-9_-]{2,64}$/),
         title: z.string().min(1).max(200),
         description: z.string().max(1000).default(""),
-        src: z.string().regex(/^\/media\/[A-Za-z0-9_./-]+\.(mp4|webm)$/, "src must be a /media/... .mp4 or .webm path"),
+        src: z.string().regex(/^\/media\/(?!.*\.\.)[A-Za-z0-9_./-]+\.(mp4|webm)$/, "src must be a /media/... .mp4 or .webm path"),
         durationMs: z.number().int().positive(),
         hazards: z
           .array(z.object({ id: z.string().min(1), startMs: z.number().int().min(0), endMs: z.number().int().positive(), label: z.string().min(1), explanation: z.string().default("") }))

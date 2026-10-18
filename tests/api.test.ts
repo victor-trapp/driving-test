@@ -229,6 +229,27 @@ describe("bookmarks, flashcards, profile and admin", () => {
     const p = await request(app).patch("/api/profile").send({ name: "Victor", nation: "wales", onboarded: true }).expect(200);
     expect(p.body).toMatchObject({ name: "Victor", nation: "wales", onboarded: true });
     await request(app).patch("/api/profile").send({ nation: "france" }).expect(400);
+    await request(app).patch("/api/profile").send({ testDate: "2026-02-31" }).expect(400);
+    const dated = await request(app).patch("/api/profile").send({ testDate: "2026-11-30" }).expect(200);
+    expect(dated.body.testDate).toBe("2026-11-30");
+  });
+
+  it("only accepts plain links and file names in imported questions", async () => {
+    const { app } = setup();
+    const base = { topic: "motorway-rules", text: "What does a red X mean?", options: ["Closed", "Open"], correct: [0], explanation: "Closed.", lastVerified: "2026-10-01" };
+    const res = await request(app)
+      .post("/api/admin/import/questions")
+      .send({
+        source: "test pack",
+        questions: [
+          { ...base, id: "OK-1", sourceUrl: "https://example.org/pack" },
+          { ...base, id: "BAD-1", sourceUrl: "javascript:alert(1)" },
+          { ...base, id: "BAD-2", sourceUrl: "https://example.org", image: { kind: "sign", ref: "../../api/admin/backup", alt: "x" } },
+        ],
+      })
+      .expect(200);
+    expect(res.body.inserted).toBe(1);
+    expect(res.body.errors.map((e: { id: string }) => e.id)).toEqual(["BAD-1", "BAD-2"]);
   });
 
   it("protects admin routes when a token is configured", async () => {

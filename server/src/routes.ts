@@ -12,6 +12,7 @@ import type { Config } from "./config";
 import { backupTo, type DbHandle } from "./db/client";
 import { importClips, importQuestions } from "./db/seed";
 import { HttpError, parse } from "./http";
+import { bearerMatches } from "./security";
 import * as hazard from "./services/hazard";
 import * as learning from "./services/learning";
 import * as mock from "./services/mock";
@@ -23,6 +24,11 @@ const PROFILE_ID = 1;
 
 const indexParam = z.coerce.number().int().min(0).max(999);
 const selection = z.array(z.number().int().min(0).max(9)).max(6);
+// A real calendar day, so 2026-02-31 doesn't get stored.
+const isoDate = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine((s) => !Number.isNaN(Date.parse(s)) && new Date(s).toISOString().startsWith(s), "not a real date");
 
 export function apiRouter(handle: DbHandle, config: Config): Router {
   const { db } = handle;
@@ -54,7 +60,7 @@ export function apiRouter(handle: DbHandle, config: Config): Router {
         nation: z.enum(["england", "scotland", "wales"]).optional(),
         theme: z.enum(["system", "light", "dark"]).optional(),
         dailyGoal: z.number().int().min(5).max(200).optional(),
-        testDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+        testDate: isoDate.nullable().optional(),
         onboarded: z.boolean().optional(),
       }),
       req.body,
@@ -220,18 +226,26 @@ export function apiRouter(handle: DbHandle, config: Config): Router {
   // ---- Admin: backup, import, reset ---------------------------------------------------------
   const admin = Router();
   admin.use((req: Request, _res: Response, next: NextFunction) => {
-    if (config.adminToken && req.get("authorization") !== `Bearer ${config.adminToken}`) {
+    if (config.adminToken && !bearerMatches(req.get("authorization"), config.adminToken)) {
       throw new HttpError(401, "unauthorised", "Admin token required");
     }
     next();
   });
 
   admin.get("/backup", async (_req, res, next) => {
-    const tmp = path.join(os.tmpdir(), `theory-backup-${Date.now()}.db`);
-    await backupTo(handle, tmp);
+    // A private directory (mode 0700), so other users on the machine can't read or swap the copy.
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "theory-backup-"));
+    const cleanup = () => fs.rm(dir, { recursive: true, force: true }, () => {});
+    const tmp = path.join(dir, "backup.db");
+    try {
+      await backupTo(handle, tmp);
+    } catch (e) {
+      cleanup();
+      throw e;
+    }
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
     res.download(tmp, `driving-theory-${stamp}.db`, (err) => {
-      fs.rm(tmp, { force: true }, () => {});
+      cleanup();
       if (err && !res.headersSent) next(err);
     });
   });
