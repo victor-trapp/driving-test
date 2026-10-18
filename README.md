@@ -1,6 +1,6 @@
 # UK Driving Theory Hub
 
-A self-hosted app for practising the Great Britain car theory test (category B). It runs as a single container on my home k3s cluster, keeps everything in SQLite on a persistent volume, and works from a laptop or a phone on the same Wi-Fi.
+A self-hosted app for practising the Great Britain car theory test (category B). Run it on your own computer with Node, as a single Docker container, or on a home k3s cluster like I do. Everything is kept in one SQLite file, and there's no account or cloud service involved.
 
 ![Dashboard](docs/screenshots/dashboard.webp)
 
@@ -26,61 +26,138 @@ What's in it:
 - The test format was checked against GOV.UK on **18 October 2026**: 50 questions in 57 minutes with 43 to pass, three of them about a short silent video, and hazard perception with 14 clips, 15 hazards, 75 points and 44 to pass ([theory test](https://www.gov.uk/theory-test), [pass marks](https://www.gov.uk/theory-test/pass-mark-and-result)). The Highway Code content matches the version last updated on GOV.UK on 22 October 2025. Every question stores the date it was last verified.
 - Northern Ireland has its own test and isn't covered.
 
-## Running it locally
+## Install and run it on your computer
 
-Needs Node 20.19 or newer.
+This is the quickest way to use it if you've cloned the repo. It works on Linux, macOS and Windows (WSL or native).
 
-```bash
-npm install
-npm run dev
-```
+### What you need
 
-That starts the API on port 3000 and the Vite dev server on 5173 with hot reload. Open http://localhost:5173. Vite also prints a `Network:` address you can open from your phone.
+- **Node.js 20.19 or newer.** Node 22 LTS is what the Docker image uses. Check with `node -v`. If you don't have it, get it from [nodejs.org](https://nodejs.org/) or a version manager like `nvm`.
+- **git**, to clone the repo.
+- Usually nothing else. The SQLite driver (`better-sqlite3`) downloads a prebuilt binary for your platform. If there isn't one for your OS and Node version, npm compiles it instead, and that needs build tools: `sudo apt install python3 make g++` on Debian/Ubuntu, or `xcode-select --install` on macOS.
 
-The database is created in `./data/theory.db` on first start, migrations run automatically, and the question bank, lessons and clips are loaded from the code. There's nothing to seed by hand, but these exist if you want them:
+### Step by step
 
-```bash
-npm run db:migrate         # apply migrations
-npm run db:seed            # migrate and load the built-in content
-npm run content:check      # sanity check the content (add -- --links to check every URL)
-```
+1. **Clone the repo and go into it**
 
-Settings are environment variables, all optional. Copy `.env.example` to `.env` to change them.
+   ```bash
+   git clone https://github.com/victor-trapp/driving-test.git
+   cd driving-test
+   ```
 
-| Variable | Default | What it does |
-|---|---|---|
-| `PORT` | `3000` | Port the server listens on |
-| `HOST` | `0.0.0.0` | Bind address. Leave as 0.0.0.0 so other devices can reach it |
-| `DATA_DIR` | `./data` | Where `theory.db` and `media/` live |
-| `APP_TIMEZONE` | `Europe/London` | Used for "today" and streaks |
-| `ADMIN_TOKEN` | not set | If set, backup, import and reset need it |
-| `LOG_REQUESTS` | `true` | One log line per API request |
+2. **Install the dependencies**
 
-## Production build
+   ```bash
+   npm ci
+   ```
+
+   `npm ci` installs the exact versions in `package-lock.json`, so you get what was tested. It takes a minute or two the first time.
+
+3. **(Optional) Create a settings file**
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   You only need this if you want to change something, like the port. Every setting has a default, and they're listed [below](#settings).
+
+4. **Start the app**
+
+   ```bash
+   npm run dev
+   ```
+
+   This starts the API on port 3000 and the web app on port 5173, with hot reload if you're editing the code. Leave the terminal open.
+
+5. **Open http://localhost:5173** in your browser. The first screen asks for your name and whether you mostly drive in England, Scotland or Wales, then you're in.
+
+6. **Stop it** with `Ctrl+C` in the terminal. Your progress is saved in `./data/theory.db` as you go, so next time you run `npm run dev` it's all still there.
+
+The database, migrations, questions, lessons and clips are all set up automatically on first start. There's nothing to seed by hand.
+
+### Running it day to day
+
+`npm run dev` is fine for personal use, but if you're not changing the code, a production build is lighter and runs as a single process:
 
 ```bash
 npm run build
 npm start
 ```
 
-`npm run build` puts the client in `dist/client` and bundles the server into `dist/server`. `npm start` serves both on http://localhost:3000.
+Then open **http://localhost:3000**. `npm run build` puts the web app in `dist/client` and bundles the server into `dist/server`. Run `npm run build` again after pulling updates.
+
+### Updating to a newer version
+
+```bash
+git pull
+npm ci
+npm run build   # only if you use npm start
+```
+
+Database migrations run automatically on the next start, and your progress is kept. Take a backup first (Settings → Download backup) if the release notes mention schema changes.
+
+### Using it from your phone (optional)
+
+By default the app only listens on `127.0.0.1`, so nothing else on your network can reach it. To use it from a phone on the same Wi-Fi:
+
+1. In `.env`, set `HOST=0.0.0.0` and an admin token, e.g. `ADMIN_TOKEN=` followed by the output of `openssl rand -hex 16`.
+2. Restart the app.
+3. Find your computer's local IP: `ip -4 addr` on Linux, `ipconfig getifaddr en0` on macOS, `ipconfig` on Windows.
+4. On the phone, open `http://<that-ip>:5173` with `npm run dev`, or `http://<that-ip>:3000` with `npm start`. If it doesn't load, your firewall is probably blocking the port.
+
+Read [Security](#security) before doing this on a network you don't control.
+
+### If something goes wrong
+
+- **`npm ci` fails while building `better-sqlite3`**: there was no prebuilt binary for your setup. Install the build tools listed above, or switch to Node 22 LTS, which always has one.
+- **`EADDRINUSE` / port already in use**: something else has port 3000. Set `PORT=3001` (or any free port) in `.env`. The web app's dev proxy follows it. If 5173 is taken, Vite picks the next free port and prints it.
+- **"This server doesn't answer to ..."**: you opened it by a hostname rather than `localhost` or an IP address. Add that name to `ALLOWED_HOSTS` in `.env` (see [Security](#security) for why).
+- **Start over from scratch**: stop the app and delete the `data/` folder. This permanently deletes all your progress, so download a backup from Settings first if you might want it.
+
+### Extra commands
+
+```bash
+npm run db:migrate         # apply migrations
+npm run db:seed            # migrate and load the built-in content
+npm run content:check      # sanity check the content (add -- --links to check every URL)
+npm run typecheck          # TypeScript checks for the client and server
+npm test                   # unit and API tests
+```
+
+### Settings
+
+Settings are environment variables, all optional. Put them in `.env` for local runs (variables already set in your shell win), or in the ConfigMap on Kubernetes.
+
+| Variable | Default | What it does |
+|---|---|---|
+| `PORT` | `3000` | Port the server listens on |
+| `HOST` | `127.0.0.1` | Bind address. `127.0.0.1` keeps it on this machine. `0.0.0.0` makes it reachable from your network. The Docker image sets `0.0.0.0`, because inside a container that's the only way in |
+| `DATA_DIR` | `./data` | Where `theory.db` and `media/` live |
+| `APP_TIMEZONE` | `Europe/London` | Used for "today" and streaks. Must be a real IANA zone or the app won't start |
+| `ADMIN_TOKEN` | not set | If set, backup, import and reset need it |
+| `ALLOWED_HOSTS` | not set | Extra hostnames the app answers to, comma-separated. `localhost` and IP addresses always work. A leading dot allows subdomains, e.g. `.home.arpa` |
+| `LOG_REQUESTS` | `true` | One log line per API request |
 
 ## Docker
 
 ```bash
 docker build --build-arg APP_VERSION=1.0.0 -t driving-theory:1.0.0 .
-docker run -d --name driving-theory -p 3000:3000 -v driving-theory-data:/data driving-theory:1.0.0
+docker run -d --name driving-theory -p 127.0.0.1:3000:3000 -v driving-theory-data:/data driving-theory:1.0.0
 ```
 
-The image is `node:22-bookworm-slim` with only the production dependencies. It runs as uid 1000, handles SIGTERM (closes SQLite cleanly, usually in under a second), and has a `HEALTHCHECK` on `/healthz`. The database lives on the `/data` volume, so recreating the container doesn't lose anything.
+Then open http://localhost:3000. The `127.0.0.1:` in `-p` matters: plain `-p 3000:3000` publishes the port on every network interface, and Docker's port publishing goes around host firewalls like `ufw`. Use `-p 3000:3000` only if you want other devices to reach it, and set `-e ADMIN_TOKEN=...` when you do.
+
+The image is `node:22-bookworm-slim` with only the production dependencies. It runs as uid 1000, works with a read-only root filesystem (`--read-only --tmpfs /tmp`), handles SIGTERM (closes SQLite cleanly, usually in under a second), and has a `HEALTHCHECK` on `/healthz`. The database lives on the `/data` volume, so recreating the container doesn't lose anything.
 
 ## Kubernetes (k3s)
 
-The manifests in `k8s/` create a namespace, ConfigMap, PVC (k3s `local-path`), a single-replica Deployment and a NodePort Service. A few choices worth knowing about:
+The manifests in `k8s/` create a namespace, ConfigMap, PVC (k3s `local-path`), a single-replica Deployment, a NodePort Service and a NetworkPolicy. A few choices worth knowing about:
 
 - **One replica, `Recreate` strategy.** SQLite has one writer and the volume is ReadWriteOnce, so the old pod is stopped before the new one starts. Upgrades have a few seconds of downtime, which is fine for this.
-- **Locked down pod**: non-root, read-only root filesystem (with an `emptyDir` on `/tmp`), all capabilities dropped, `RuntimeDefault` seccomp, no service account token. The namespace enforces the `restricted` Pod Security level.
+- **Locked down pod**: non-root, read-only root filesystem (with an `emptyDir` on `/tmp`), all capabilities dropped, `RuntimeDefault` seccomp, no service account token, no service links. The namespace enforces the `restricted` Pod Security level.
+- **NetworkPolicy**: ingress on the app port only, and no egress at all, because the app never makes outbound connections. k3s enforces this out of the box. If you add something that needs outbound access, this is the file to change.
 - **Probes**: startup and readiness on `/readyz` (checks the database), liveness on `/healthz`.
+- **`ALLOWED_HOSTS`** in the ConfigMap lists hostnames the app answers to. NodePort access by IP and `kubectl port-forward` work without it. It's set to `theory.home.arpa` to match the optional Ingress, so change it if you use a different name.
 - **NodePort 30081.** I'd normally use 30080, but `lab-calc-web` already has it on my k3s-lab cluster. Change `k8s/40-service.yaml` if you want something else.
 
 ### 1. Build the image and get it onto the node
@@ -152,13 +229,23 @@ kubectl -n driving-theory describe pod -l app.kubernetes.io/name=driving-theory
 
 In k9s: `:ns` → `driving-theory`, then `l` on the pod for logs.
 
-## Keeping it private
+## Security
 
-There's no login, so anyone who can reach the port can use it, reset it or download the database. On a home network that's usually fine, but:
+There's no login. It's a single-person app for your own computer or home network, so anyone who can reach the port can use it. With the defaults, that's only you.
 
-- **Don't port-forward 30081 (or 80/443) on your router.** NodePorts listen on every node interface, so router port forwarding is the main way this ends up on the internet.
-- Check your router doesn't have UPnP opening ports automatically.
-- If other people use your Wi-Fi, set an admin token so only you can back up, import or reset:
+**What's in place:**
+
+- **Local only by default.** `npm run dev` and `npm start` listen on `127.0.0.1`, so other devices can't connect until you set `HOST=0.0.0.0`. The Docker command above publishes on `127.0.0.1` too.
+- **DNS rebinding protection.** Being on localhost doesn't stop a website you visit from trying to talk to the app through your browser: it can point its own domain at `127.0.0.1` and read the API as if it were same-origin. The app only answers to `localhost`, IP addresses and the names in `ALLOWED_HOSTS`, which shuts that down.
+- **Cross-site request protection.** Changes (answers, resets, imports) sent from another website's page are refused by checking the `Origin` header, so a page can't submit forms to the app behind your back.
+- **Optional admin token** for backup, import and reset, compared in constant time.
+- **Strict Content Security Policy.** Nothing is loaded from external sites (fonts, signs and scripts are all bundled), and the only outbound links go to GOV.UK.
+- **Input limits.** Every API request is validated, bodies are capped at 100 kB (10 MB for question packs), and imported links and file names are restricted to plain `http(s)` URLs and safe characters.
+- **Locked down container and pod**, described under Docker and Kubernetes above.
+
+**If you make it reachable from your network** (`HOST=0.0.0.0`, `docker run -p 3000:3000` or the k3s NodePort):
+
+- Set `ADMIN_TOKEN`, so only you can back up, import or reset. The app warns on startup if you don't. On Kubernetes:
 
   ```bash
   kubectl -n driving-theory create secret generic driving-theory-admin --from-literal=token="$(openssl rand -hex 16)"
@@ -166,9 +253,10 @@ There's no login, so anyone who can reach the port can use it, reset it or downl
   kubectl -n driving-theory get secret driving-theory-admin -o jsonpath='{.data.token}' | base64 -d; echo
   ```
 
-  Then paste the token in Settings → Data.
-- For access away from home, use a VPN like Tailscale or WireGuard rather than opening ports.
-- The app sends a strict Content Security Policy, loads nothing from external sites (fonts, signs and scripts are all bundled), and only links out to GOV.UK.
+  Then paste the token in Settings → Data. The token only guards those three actions. Anyone on the network can still answer questions and see progress.
+- **Don't port-forward it on your router** (3000, 5173, 30081, or 80/443 with the Ingress). There's no HTTPS, so the token and your data would cross the internet in plain text. NodePorts listen on every node interface, so router port forwarding is the main way this ends up public.
+- Check your router doesn't have UPnP opening ports automatically.
+- For access away from home, use a VPN like Tailscale or WireGuard rather than opening ports. If you open it by a MagicDNS name, add that name to `ALLOWED_HOSTS`.
 
 ## Upgrading
 
@@ -182,7 +270,7 @@ kubectl -n driving-theory set image deploy/driving-theory app=driving-theory:1.0
 kubectl -n driving-theory rollout status deploy/driving-theory
 ```
 
-Then update the tag in `k8s/30-deployment.yaml` so the manifest matches what's running. Database migrations run automatically on start, and the built-in questions are updated in place. Questions removed from the code are deactivated rather than deleted, so your history stays intact. Take a backup first if the release notes mention schema changes.
+Then update the tag in `k8s/30-deployment.yaml` so the manifest matches what's running. If the release changed anything else in `k8s/` (this one adds `50-networkpolicy.yaml` and `ALLOWED_HOSTS`), apply that too with `kubectl apply -f k8s/` once the tag is updated. Database migrations run automatically on start, and the built-in questions are updated in place. Questions removed from the code are deactivated rather than deleted, so your history stays intact. Take a backup first if the release notes mention schema changes.
 
 ## Backup and restore
 
@@ -196,7 +284,7 @@ kubectl -n driving-theory exec $POD -- node dist/server/cli.js backup /tmp/theor
 kubectl cp driving-theory/$POD:/tmp/theory-backup.db ./theory-backup-$(date +%F).db
 ```
 
-**Restore**: copy the backup in as `restore.db` and restart. On start, the app checks it's a real SQLite file, moves the current database aside as `theory.db.before-restore-<timestamp>` and swaps the backup in.
+**Restore**: copy the backup in as `restore.db` and restart. On start, the app checks it's a complete, uncorrupted SQLite file (a half-copied file is renamed to `restore.db.rejected` and your current data is left alone), moves the current database aside as `theory.db.before-restore-<timestamp>` and swaps the backup in.
 
 ```bash
 kubectl cp ./theory-backup-2026-10-18.db driving-theory/$POD:/data/restore.db
@@ -204,7 +292,7 @@ kubectl -n driving-theory rollout restart deploy/driving-theory
 kubectl -n driving-theory logs deploy/driving-theory | head -3   # "restored database from restore.db..."
 ```
 
-With plain Docker it's the same idea: `docker cp backup.db driving-theory:/data/restore.db && docker restart driving-theory`.
+With plain Docker it's the same idea: `docker cp backup.db driving-theory:/data/restore.db && docker restart driving-theory`. Running locally with Node, stop the app, copy the backup to `data/restore.db` and start it again.
 
 The PVC uses `local-path`, so the data physically sits under `/var/lib/rancher/k3s/storage/` on the node. It survives pod restarts and redeploys, but **deleting the PVC or the namespace deletes the data** (the reclaim policy is `Delete`). Back up before `kubectl delete -f k8s/`.
 
@@ -233,7 +321,7 @@ npm run typecheck
 npm test
 ```
 
-63 tests cover question selection, answer and mock scoring, pass/fail at 43, the 57-minute timer and auto-submit, practice sessions surviving a restart, hazard scoring and pattern detection, imports, backup and restore, and the main API flows against a real SQLite file.
+78 tests cover question selection (including lopsided question banks), answer and mock scoring, pass/fail at 43, the 57-minute timer and auto-submit, practice sessions surviving a restart, hazard scoring and pattern detection, imports and their validation, backup and restore (including refusing a truncated backup), the DNS rebinding and cross-site request guards, request size limits, and the main API flows against a real SQLite file.
 
 ## Project layout
 
