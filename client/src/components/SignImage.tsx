@@ -161,16 +161,34 @@ export function RoadMarking({ id, label, className }: { id: string; label: strin
   return <div className={cn("overflow-hidden rounded-md", className)}>{draw ? draw(label) : null}</div>;
 }
 
-/** Renders a library sign: the official DfT image or one of our marking drawings. */
+/**
+ * Renders a library sign: the official DfT image or one of our marking drawings.
+ *
+ * The box is a fixed area, so captions under a row of signs line up whatever shape the
+ * signs are. The image scales down to fit inside it: max-h/max-w resolve against the box's
+ * fixed height here, which a grid row wouldn't give them (that's what let tall signs like
+ * "One-way traffic" spill over their captions). The white plate sits on the image itself so
+ * it hugs each sign's shape and reads the same in dark mode. `className` styles the plate.
+ */
 export function SignImage({ sign, className, size = "md" }: { sign: Sign; className?: string; size?: "sm" | "md" | "lg" }) {
-  const box = size === "sm" ? "h-16 w-20" : size === "lg" ? "h-48 w-56 sm:h-56 sm:w-64" : "h-28 w-32";
-  if (sign.image.kind === "marking") {
+  const box = size === "sm" ? "h-16 w-20" : size === "lg" ? "h-48 w-56 sm:h-56 sm:w-64" : "h-32 w-full";
+  if (sign.image.kind === "marking" && size !== "md") {
     return <RoadMarking id={sign.image.id} label={sign.name} className={cn(box, "aspect-[4/3] w-auto", className)} />;
   }
   return (
-    // White plate behind the sign so it reads the same in dark mode.
-    <div className={cn("grid place-items-center rounded-md bg-white p-2", box, className)}>
-      <img src={`/signs/${sign.image.file}.webp`} alt={sign.name} loading="lazy" decoding="async" className="h-full w-full object-contain" />
+    <div className={cn("flex shrink-0 items-center justify-center", box)}>
+      {sign.image.kind === "marking" ? (
+        // Width-led so the 4:3 drawing never overflows a narrow card; 171px wide is 128px tall.
+        <RoadMarking id={sign.image.id} label={sign.name} className={cn("aspect-[4/3] w-full max-w-[171px]", className)} />
+      ) : (
+        <img
+          src={`/signs/${sign.image.file}.webp`}
+          alt={sign.name}
+          loading="lazy"
+          decoding="async"
+          className={cn("max-h-full max-w-full rounded-md bg-white object-contain p-2", className)}
+        />
+      )}
     </div>
   );
 }
