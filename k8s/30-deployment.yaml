@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: driving-theory
+  namespace: driving-theory
+  labels:
+    app.kubernetes.io/name: driving-theory
+spec:
+  # SQLite has a single writer, so this stays at one replica. Recreate (not RollingUpdate)
+  # stops the old pod before the new one starts, so two pods never share the database
+  # and the ReadWriteOnce volume can move cleanly.
+  replicas: 1
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: driving-theory
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: driving-theory
+    spec:
+      automountServiceAccountToken: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: app
+          # Built locally and loaded into the node's container runtime (see README).
+          image: driving-theory:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: driving-theory-config
+          env:
+            - name: DATA_DIR
+              value: /data
+            # Optional: protects backup/import/reset. Create the secret to turn it on:
+            #   kubectl -n driving-theory create secret generic driving-theory-admin --from-literal=token=...
+            - name: ADMIN_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: driving-theory-admin
+                  key: token
+                  optional: true
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+          startupProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            # Migrations and seeding take a second or two on start.
+            initialDelaySeconds: 2
+            periodSeconds: 2
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: driving-theory-data
+        # Backups are written to /tmp before download; the root filesystem is read-only.
+        - name: tmp
+          emptyDir:
+            sizeLimit: 256Mi

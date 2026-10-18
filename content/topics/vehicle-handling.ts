@@ -7,7 +7,7 @@ export default defineTopic(
     number: 8,
     title: "Vehicle Handling",
     blurb: "Braking, skids, lights, hills and how the road surface changes the way the car behaves.",
-    icon: "steering-wheel",
+    icon: "car-front",
     objectives: [
       "Brake in a way that keeps the car under control",
       "Use lights correctly, including fog lights and hazard lights",

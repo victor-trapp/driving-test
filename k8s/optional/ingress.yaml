@@ -1,0 +1,28 @@
+# Optional. Not applied by `kubectl apply -f k8s/` because it lives in a subfolder.
+#
+# Use this if you run an ingress controller (Traefik ships with k3s unless disabled) and
+# want a hostname instead of a port. home.arpa is reserved for home networks (RFC 8375),
+# so it won't clash with a real domain. Point it at your node in your router's DNS or in
+# /etc/hosts on each device, e.g.  192.168.1.100  theory.home.arpa
+#
+#   kubectl apply -f k8s/optional/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: driving-theory
+  namespace: driving-theory
+  labels:
+    app.kubernetes.io/name: driving-theory
+spec:
+  # ingressClassName: traefik
+  rules:
+    - host: theory.home.arpa
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: driving-theory
+                port:
+                  name: http

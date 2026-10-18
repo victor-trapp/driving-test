@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: driving-theory
+  namespace: driving-theory
+  labels:
+    app.kubernetes.io/name: driving-theory
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: driving-theory
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      # Reachable at http://<node-ip>:30081 from anything on the LAN. 30080 would be the
+      # natural default but it's already used by lab-calc-web on the k3s-lab cluster.
+      # Any free port in 30000-32767 works.
+      nodePort: 30081

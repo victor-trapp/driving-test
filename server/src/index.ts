@@ -1,11 +1,16 @@
 import fs from "node:fs";
 import { loadConfig } from "./config";
 import { openDatabase, runMigrations } from "./db/client";
+import { applyPendingRestore } from "./db/restore";
 import { seedContent } from "./db/seed";
 import { createApp } from "./app";
 
 const config = loadConfig();
 fs.mkdirSync(config.mediaDir, { recursive: true });
+
+const restore = applyPendingRestore(config.databasePath);
+if (restore.restored) console.log(`restored database from restore.db${restore.keptAs ? `, previous copy kept as ${restore.keptAs}` : ""}`);
+else if (restore.reason) console.warn(restore.reason);
 
 const handle = openDatabase(config.databasePath);
 runMigrations(handle, config.migrationsDir);

@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: driving-theory-config
+  namespace: driving-theory
+  labels:
+    app.kubernetes.io/name: driving-theory
+data:
+  APP_TIMEZONE: Europe/London
+  LOG_REQUESTS: "true"

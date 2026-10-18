@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: driving-theory-data
+  namespace: driving-theory
+  labels:
+    app.kubernetes.io/name: driving-theory
+spec:
+  # k3s ships the local-path provisioner as the default class. Change this to match your
+  # cluster (or remove the line to use whatever is marked default).
+  storageClassName: local-path
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      # The database is a few MB even after years of use. Leave room if you add MP4 clips.
+      storage: 1Gi

@@ -1,0 +1,17 @@
+node_modules
+dist
+data
+coverage
+.git
+.github
+.vscode
+*.log
+*.db
+*.db-shm
+*.db-wal
+.env
+.env.*
+!.env.example
+k8s
+Dockerfile
+.dockerignore

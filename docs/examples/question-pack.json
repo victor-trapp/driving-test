@@ -1,0 +1,43 @@
+{
+  "source": "Example pack (made up for testing the importer)",
+  "questions": [
+    {
+      "id": "EX-001",
+      "topic": "motorway-rules",
+      "difficulty": 1,
+      "text": "Which lane should you normally drive in on a three-lane motorway?",
+      "options": ["The left-hand lane", "The middle lane", "The right-hand lane", "Whichever lane is quietest"],
+      "correct": [0],
+      "explanation": "Keep in the left lane unless you're overtaking, then move back left when it's safe.",
+      "hc": [{ "label": "Highway Code rule 264", "url": "https://www.gov.uk/guidance/the-highway-code/motorways-253-to-273#rule264" }],
+      "sourceUrl": "https://www.gov.uk/guidance/the-highway-code/motorways-253-to-273",
+      "lastVerified": "2026-10-18",
+      "contentVersion": 1
+    },
+    {
+      "id": "EX-002",
+      "topic": "road-and-traffic-signs",
+      "difficulty": 2,
+      "text": "What does this sign mean?",
+      "options": ["No entry for vehicular traffic", "No stopping", "Road closed for repairs", "One-way street"],
+      "correct": [0],
+      "explanation": "A red circle with a white horizontal bar means no entry.",
+      "hc": [{ "label": "Highway Code: traffic signs", "url": "https://www.gov.uk/guidance/the-highway-code/traffic-signs" }],
+      "image": { "kind": "sign", "ref": "r-no-entry", "alt": "Red circle with a white bar" },
+      "sourceUrl": "https://www.gov.uk/guidance/the-highway-code/traffic-signs",
+      "lastVerified": "2026-10-18"
+    },
+    {
+      "id": "EX-003",
+      "topic": "vulnerable-road-users",
+      "difficulty": 2,
+      "text": "Which TWO should you give at least 2 metres of space when passing?",
+      "options": ["A horse rider", "A pedestrian walking in the road", "A parked car", "A bus at a bus stop"],
+      "correct": [0, 1],
+      "explanation": "Rule 163: pass horse riders and pedestrians in the road wide and slow, leaving at least 2 metres.",
+      "hc": [{ "label": "Highway Code rule 163", "url": "https://www.gov.uk/guidance/the-highway-code/using-the-road-159-to-203#rule163" }],
+      "sourceUrl": "https://www.gov.uk/guidance/the-highway-code/using-the-road-159-to-203",
+      "lastVerified": "2026-10-18"
+    }
+  ]
+}
