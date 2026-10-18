@@ -32,6 +32,19 @@ describe("mock question selection", () => {
     expect(ids.every((id) => !pool.find((q) => q.id === id)!.scenarioId)).toBe(true);
   });
 
+  it("still fills the test when topic sizes are very uneven", () => {
+    // 13 topics with a single question and one big one, like a bank padded out by an import.
+    const lopsided: PoolQuestion[] = [
+      ...Array.from({ length: 13 }, (_, i) => ({ id: `small-${i}`, topicId: `t${i}` })),
+      ...Array.from({ length: 60 }, (_, i) => ({ id: `big-${i}`, topicId: "big" })),
+    ];
+    for (let seed = 1; seed <= 10; seed++) {
+      const ids = selectMockQuestions(lopsided, { count: 50, rng: mulberry32(seed) });
+      expect(ids).toHaveLength(50);
+      expect(new Set(ids).size).toBe(50);
+    }
+  });
+
   it("is repeatable for the same seed and differs between seeds", () => {
     const a = selectMockQuestions(pool, { count: 50, rng: mulberry32(42) });
     const b = selectMockQuestions(pool, { count: 50, rng: mulberry32(42) });

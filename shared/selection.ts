@@ -78,14 +78,20 @@ function spreadAcrossTopics(pool: readonly PoolQuestion[], count: number, rng: R
     remainders.push({ topic: t, rem: exact - Math.floor(exact) });
   }
   remainders.sort((a, b) => b.rem - a.rem || (rng() < 0.5 ? -1 : 1));
-  let i = 0;
-  while (allocated < count && i < remainders.length * 4) {
-    const t = remainders[i % remainders.length].topic;
-    if (quota.get(t)! < byTopic.get(t)!.length) {
-      quota.set(t, quota.get(t)! + 1);
-      allocated++;
+  // Hand out the rest one at a time, largest remainder first, skipping topics that have run
+  // out. Keep going until the count is met: with lopsided topic sizes that can take more than
+  // a few passes. The pool is bigger than the count, so some topic always has room.
+  let progressed = true;
+  while (allocated < count && progressed) {
+    progressed = false;
+    for (const { topic: t } of remainders) {
+      if (allocated >= count) break;
+      if (quota.get(t)! < byTopic.get(t)!.length) {
+        quota.set(t, quota.get(t)! + 1);
+        allocated++;
+        progressed = true;
+      }
     }
-    i++;
   }
 
   const out: string[] = [];

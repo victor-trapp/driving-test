@@ -34,6 +34,29 @@ describe("restore from backup", () => {
     expect(applyPendingRestore(path.join(tempDir(), "theory.db")).restored).toBe(false);
   });
 
+  it("refuses a truncated backup and keeps the current database", async () => {
+    const dir = tempDir();
+    const dbFile = path.join(dir, "theory.db");
+    const h = openTestDb(dbFile);
+    h.db.update(profiles).set({ name: "Keep me" }).where(eq(profiles.id, 1)).run();
+    const full = path.join(dir, "full.db");
+    await backupTo(h, full);
+    h.close();
+    // Header intact, most of the pages missing: what an interrupted kubectl cp leaves behind.
+    const bytes = fs.readFileSync(full);
+    fs.writeFileSync(path.join(dir, "restore.db"), bytes.subarray(0, Math.floor(bytes.length / 3)));
+
+    const r = applyPendingRestore(dbFile);
+    expect(r.restored).toBe(false);
+    expect(r.reason).toMatch(/integrity check/);
+    expect(fs.existsSync(path.join(dir, "restore.db.rejected"))).toBe(true);
+    expect(fs.existsSync(path.join(dir, "restore.db-wal"))).toBe(false);
+
+    const after = openTestDb(dbFile);
+    open.push(after);
+    expect(after.db.select().from(profiles).get()!.name).toBe("Keep me");
+  });
+
   it("refuses a file that isn't SQLite", () => {
     const dir = tempDir();
     fs.writeFileSync(path.join(dir, "restore.db"), "not a database");
