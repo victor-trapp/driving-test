@@ -150,6 +150,7 @@ export default function Flashcards() {
           )}
         </CardContent>
       </Card>
+      {review.isError && <p className="mt-3 text-sm text-danger">The last card didn't save: {review.error.message}</p>}
     </div>
   );
 }

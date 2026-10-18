@@ -24,7 +24,8 @@
   --accent: #f2c300;
   --accent-foreground: #1a1a1a;
   --lplate: #d4351c;
-  --success: #1e7f4f;
+  /* 4.96:1 on --success-soft, the lowest it sits on. #1e7f4f was 4.24, under WCAG AA. */
+  --success: #1b7347;
   --success-soft: #e1f0e7;
   --danger: #b3261e;
   --danger-soft: #f7e2df;

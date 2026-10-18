@@ -177,7 +177,7 @@ export default function LessonPage() {
   });
 
   if (q.isPending) return <LoadingBlock rows={5} />;
-  if (q.isError) return <ErrorBlock error={q.error} onRetry={() => q.refetch()} />;
+  if (q.isError) return (q.error as { status?: number }).status === 404 ? <NotFound /> : <ErrorBlock error={q.error} onRetry={() => q.refetch()} />;
   const { topic, stats } = q.data;
   const idx = topic.lessons.findIndex((l) => l.id === lessonId);
   if (idx < 0) return <NotFound />;

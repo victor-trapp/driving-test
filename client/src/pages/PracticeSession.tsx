@@ -27,12 +27,13 @@ export default function PracticeSessionPage() {
   const bookmark = useToggleBookmark();
 
   const s = session.data;
-  // Start on the first unanswered question when the session loads.
+  // Start on the first unanswered question when the session loads. A finished session
+  // (including one ended early) can't take more answers, so go straight to its summary.
   useEffect(() => {
     if (s && index === null) {
       const firstOpen = s.items.findIndex((it) => !it.feedback);
       setIndex(firstOpen === -1 ? s.items.length - 1 : firstOpen);
-      if (s.completedAt && firstOpen === -1) finish.mutate();
+      if (s.completedAt) finish.mutate();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [s]);

@@ -23,6 +23,9 @@ export default function HazardRun() {
   const [i, setI] = useState(0);
   const [results, setResults] = useState<ClipAttemptResult[]>([]);
   const [error, setError] = useState<string | null>(null);
+  // Clicks from a clip that played but didn't save, so the save can be retried without replaying it.
+  const [unsaved, setUnsaved] = useState<number[] | null>(null);
+  const [saving, setSaving] = useState(false);
 
   if (clips.isPending) return <LoadingBlock rows={3} />;
   if (clips.isError) return <ErrorBlock error={clips.error} onRetry={() => clips.refetch()} />;
@@ -33,10 +36,12 @@ export default function HazardRun() {
   const total = results.reduce((a, r) => a + r.result.total, 0);
 
   const onComplete = async (clicks: number[]) => {
+    setSaving(true);
     try {
       const r = await api.post<ClipAttemptResult>(`/hazard/clips/${list[i].id}/attempts`, { clicks, runId });
       setResults((prev) => [...prev, r]);
       setError(null);
+      setUnsaved(null);
       if (i + 1 < list.length) setI(i + 1);
       else {
         qc.invalidateQueries({ queryKey: keys.clips });
@@ -44,6 +49,9 @@ export default function HazardRun() {
       }
     } catch (e) {
       setError((e as Error).message);
+      setUnsaved(clicks);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -115,7 +123,16 @@ export default function HazardRun() {
       </div>
       <Progress value={(i / list.length) * 100} className="mb-4" label="Clips completed" />
       <ClipPlayer key={list[i].id} clip={list[i]} mode="test" onComplete={onComplete} />
-      {error && <p className="mt-3 text-sm text-danger">Couldn't save that clip: {error}</p>}
+      {error && (
+        <p className="mt-3 text-sm text-danger">
+          Couldn't save that clip: {error}{" "}
+          {unsaved && (
+            <Button variant="link" size="sm" onClick={() => void onComplete(unsaved)} disabled={saving}>
+              Try again
+            </Button>
+          )}
+        </p>
+      )}
     </div>
   );
 }

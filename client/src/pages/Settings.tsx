@@ -66,8 +66,12 @@ export default function Settings() {
       const a = document.createElement("a");
       a.href = url;
       a.download = name;
+      // Firefox only follows links that are in the document, and revoking the URL straight
+      // after click() can cancel the download in Safari and Firefox.
+      document.body.append(a);
       a.click();
-      URL.revokeObjectURL(url);
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
     },
   });
 
@@ -181,6 +185,9 @@ export default function Settings() {
               ref={fileRef}
               type="file"
               accept="application/json,.json"
+              aria-label="Question pack JSON file"
+              // The visible button below opens it; keep the hidden input out of the tab order.
+              tabIndex={-1}
               className="sr-only"
               onChange={(e) => {
                 const f = e.target.files?.[0];
