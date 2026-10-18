@@ -1,0 +1,20 @@
+# Keeps the cluster in step with k8s/ on main. CI changes the image tag in
+# k8s/30-deployment.yaml; Flux sees the new commit within a minute and applies it.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: driving-theory
+  namespace: flux-system
+spec:
+  # Re-applies every 10 minutes to undo manual changes, and straight away when git changes.
+  interval: 10m
+  sourceRef:
+    kind: GitRepository
+    name: driving-test
+  path: ./k8s
+  # Objects removed from k8s/ are removed from the cluster too. The namespace and PVC are
+  # annotated so Flux never prunes them: deleting either one deletes the database.
+  prune: true
+  # Mark the deploy as failed if the new pod doesn't become ready.
+  wait: true
+  timeout: 5m

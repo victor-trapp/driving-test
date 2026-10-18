@@ -161,31 +161,32 @@ The manifests in `k8s/` create a namespace, ConfigMap, PVC (k3s `local-path`), a
 - **`ALLOWED_HOSTS`** in the ConfigMap lists hostnames the app answers to. NodePort access by IP and `kubectl port-forward` work without it. It's set to `theory.home.arpa` to match the optional Ingress, so change it if you use a different name.
 - **NodePort 30081.** I'd normally use 30080, but `lab-calc-web` already has it on my k3s-lab cluster. Change `k8s/40-service.yaml` if you want something else.
 
-### 1. Build the image and get it onto the node
+### 1. The image
 
-There's no public registry involved. Build with Docker, then load the image straight into k3s's containerd:
+CI publishes every build of `main` to `ghcr.io/victor-trapp/driving-test`, and `k8s/30-deployment.yaml` always points at the newest one. The image is public, so there's nothing to build or log in to: the node pulls it.
+
+To run your own build instead (local changes, or a fork without CI), build it and load it straight into k3s's containerd, then point the Deployment at it after step 2:
 
 ```bash
-docker build --build-arg APP_VERSION=1.0.0 -t driving-theory:1.0.0 .
-docker save driving-theory:1.0.0 | sudo k3s ctr images import -
-sudo k3s ctr images ls | grep driving-theory
+docker build --build-arg APP_VERSION=dev-1 -t driving-theory:dev-1 .
+docker save driving-theory:dev-1 | sudo k3s ctr images import -
+kubectl -n driving-theory set image deploy/driving-theory app=driving-theory:dev-1
 ```
 
-The Deployment uses `imagePullPolicy: IfNotPresent`, so it uses that local copy and never tries Docker Hub.
-
-If you can't use `sudo` on the node, a throwaway registry on localhost works too. containerd allows plain HTTP for `localhost`, so no registry config is needed:
+If you can't use `sudo` on the node, push to a throwaway registry on localhost instead. containerd allows plain HTTP for `localhost`, so no registry config is needed. This only works when the registry runs on the same machine as the k3s node:
 
 ```bash
 docker run -d --name theory-registry -p 127.0.0.1:5000:5000 registry:2
-docker tag driving-theory:1.0.0 localhost:5000/driving-theory:1.0.0
-docker push localhost:5000/driving-theory:1.0.0
-# after applying the manifests:
-kubectl -n driving-theory set image deploy/driving-theory app=localhost:5000/driving-theory:1.0.0
+docker tag driving-theory:dev-1 localhost:5000/driving-theory:dev-1
+docker push localhost:5000/driving-theory:dev-1
+kubectl -n driving-theory set image deploy/driving-theory app=localhost:5000/driving-theory:dev-1
 ```
 
-This only works when the registry runs on the same machine as the k3s node, because `localhost` is resolved by the node.
+Use a new tag for every build: with `IfNotPresent`, the node keeps running an image it already has under the same tag. If Flux is managing the app (below), it will put the CI image back within 10 minutes, so suspend it first with `flux suspend kustomization driving-theory`.
 
 ### 2. Deploy
+
+Either set up [automatic deploys](#automatic-deploys-cicd) and let Flux apply everything, or apply it once by hand:
 
 ```bash
 kubectl apply -f k8s/
@@ -230,6 +231,75 @@ kubectl -n driving-theory describe pod -l app.kubernetes.io/name=driving-theory
 
 In k9s: `:ns` → `driving-theory`, then `l` on the pod for logs.
 
+## Automatic deploys (CI/CD)
+
+Push to `main` and the cluster updates itself within a few minutes. Nothing to build, tag or apply by hand.
+
+```
+git push ──► GitHub Actions ─────────────────────────► ghcr.io/victor-trapp/driving-test:main-<sha>
+             typecheck, test, build image, push              ▲
+             then commit the new tag to                      │ node pulls the image
+             k8s/30-deployment.yaml                          │
+                     │                                       │
+                     ▼                                       │
+             github.com (main) ◄── Flux polls every minute ── k3s cluster
+                                   and applies k8s/
+```
+
+- **CI** ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs the same checks as `npm test` on every push and pull request. On `main` it then builds the image, pushes it as `main-<short sha>`, and commits that tag into `k8s/30-deployment.yaml` as "Deploy main-abc1234". If any check fails, nothing is published or deployed.
+- **Flux** runs inside the cluster and makes it match `k8s/` on `main` ([deploy/flux/](deploy/flux/)). It only makes outbound connections, so the cluster never has to be reachable from the internet, and it needs no GitHub credentials because the repo and image are public.
+- **Git is the record of what's running.** The image tag in `k8s/30-deployment.yaml` on `main` is what's deployed. Anything changed by hand with `kubectl` is put back on the next reconcile, within 10 minutes.
+
+### One-time setup
+
+1. **Push once, so CI publishes the first image.** Watch it in the repo's Actions tab. When it's done there's a "Deploy main-…" commit on `main`.
+
+2. **Make the image public.** GitHub creates new packages as private. Go to your GitHub profile → Packages → `driving-test` → Package settings → Change visibility → Public. You only do this once.
+
+3. **Install Flux on the cluster and point it at this repo:**
+
+   ```bash
+   curl -s https://fluxcd.io/install.sh | sudo bash      # the flux CLI (macOS: brew install fluxcd/tap/flux)
+   flux check --pre
+   flux install --components=source-controller,kustomize-controller
+   kubectl apply -f deploy/flux/
+   flux get kustomizations --watch                      # wait for driving-theory: Ready True
+   ```
+
+   Only the two controllers needed for this are installed. If the app was already running from `kubectl apply`, Flux takes over the existing objects. Your data stays on the PVC.
+
+### Day to day
+
+1. Commit and push to `main`.
+2. CI runs (about 3 to 4 minutes) and adds a "Deploy main-…" commit.
+3. Within a minute Flux applies it, and the pod restarts on the new image. Expect a few seconds of downtime, because of the `Recreate` strategy.
+4. Run `git pull` before you next push, to pick up the deploy commit. Setting `git config pull.rebase true` in this repo keeps your history linear when you do.
+
+Pushes that only change `k8s/` or `deploy/` (a ConfigMap tweak, say) skip CI, and Flux applies them directly. Markdown-only changes don't deploy anything.
+
+### Checking and troubleshooting
+
+```bash
+flux get sources git                    # latest commit Flux has fetched
+flux get kustomizations                 # Ready True means the last apply worked and the pod is healthy
+flux events --for Kustomization/driving-theory
+flux reconcile kustomization driving-theory --with-source   # don't wait for the next poll
+curl -s http://<node-ip>:30081/api/meta | grep -o '"appVersion":"[^"]*"'
+```
+
+`appVersion` is the image tag, so you can see exactly which build is live.
+
+### Rolling back
+
+Revert the "Deploy main-…" commit for the bad version and push:
+
+```bash
+git revert <deploy commit sha>
+git push
+```
+
+Changes that only touch `k8s/` skip CI, so this goes straight to Flux and the previous image is back within a minute. Then fix the code and push as normal. For an emergency stop, `flux suspend kustomization driving-theory` freezes the cluster as it is, so you can `kubectl set image` to any earlier `main-…` tag. `flux resume kustomization driving-theory` hands control back to git.
+
 ## Security
 
 There's no login. It's a single-person app for your own computer or home network, so anyone who can reach the port can use it. With the defaults, that's only you.
@@ -261,17 +331,15 @@ There's no login. It's a single-person app for your own computer or home network
 
 ## Upgrading
 
-Use a new image tag for every build. With `IfNotPresent`, reusing a tag means the node keeps running the old image it already has.
+With [automatic deploys](#automatic-deploys-cicd) there's nothing to do. Without Flux, `k8s/30-deployment.yaml` already points at the newest published image, so pull and apply:
 
 ```bash
 git pull
-docker build --build-arg APP_VERSION=1.0.1 -t driving-theory:1.0.1 .
-docker save driving-theory:1.0.1 | sudo k3s ctr images import -
-kubectl -n driving-theory set image deploy/driving-theory app=driving-theory:1.0.1
+kubectl apply -f k8s/
 kubectl -n driving-theory rollout status deploy/driving-theory
 ```
 
-Then update the tag in `k8s/30-deployment.yaml` so the manifest matches what's running. If the release changed anything else in `k8s/` (this one adds `50-networkpolicy.yaml` and `ALLOWED_HOSTS`), apply that too with `kubectl apply -f k8s/` once the tag is updated. Database migrations run automatically on start, and the built-in questions are updated in place. Questions removed from the code are deactivated rather than deleted, so your history stays intact. Take a backup first if the release notes mention schema changes.
+Database migrations run automatically on start, and the built-in questions are updated in place. Questions removed from the code are deactivated rather than deleted, so your history stays intact. Take a backup first if the release notes mention schema changes.
 
 ## Backup and restore
 

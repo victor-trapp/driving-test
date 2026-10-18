@@ -1,0 +1,107 @@
+name: CI
+
+# Every push to main is tested, built into an image on ghcr.io, and deployed: the last
+# step commits the new image tag to k8s/30-deployment.yaml, and Flux on the cluster
+# applies whatever is there. Pull requests only run the checks.
+#
+# Pushes that only touch k8s/ or deploy/ skip CI and go straight to Flux. That's what
+# makes `git revert` of a deploy commit a rollback: if it ran CI, CI would build the latest
+# code and put the newer tag straight back.
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["**.md", "docs/**", "k8s/**", "deploy/**"]
+  pull_request:
+    branches: [main]
+
+# One run per branch at a time. On main, runs queue instead of cancelling each other, so a
+# run is never stopped between pushing an image and committing its tag.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  IMAGE: ghcr.io/${{ github.repository }}
+
+jobs:
+  verify:
+    name: Typecheck, test, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Content check
+        run: npm run content:check
+
+      - name: Build
+        run: npm run build
+
+  deploy:
+    name: Publish image and deploy
+    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # commit the new image tag
+      packages: write # push to ghcr.io
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Pick the image tag
+        id: tag
+        run: echo "tag=main-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:${{ steps.tag.outputs.tag }}
+            ${{ env.IMAGE }}:latest
+          build-args: APP_VERSION=${{ steps.tag.outputs.tag }}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Point the Deployment at the new image
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          sed -i -E "s#^(\s+image: )ghcr\.io/.*#\1${IMAGE}:${TAG}#" k8s/30-deployment.yaml
+          grep -q "image: ${IMAGE}:${TAG}$" k8s/30-deployment.yaml || { echo "::error::no ghcr.io image line in k8s/30-deployment.yaml"; exit 1; }
+          if git diff --quiet; then echo "Already on ${TAG}"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Deploy ${TAG} [skip ci]"
+          # main may have moved on while this ran. The commit only touches the image line,
+          # so replay it on top. Pushes made with GITHUB_TOKEN don't start another run.
+          git pull --rebase origin main
+          git push origin HEAD:main

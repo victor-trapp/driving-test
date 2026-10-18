@@ -1,0 +1,22 @@
+# Where Flux gets the manifests from. Apply once after installing Flux (see "Automatic
+# deploys" in the README):
+#
+#   kubectl apply -f deploy/flux/
+#
+# The repo is public, so Flux reads it over HTTPS with no credentials.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: driving-test
+  namespace: flux-system
+spec:
+  interval: 1m
+  url: https://github.com/victor-trapp/driving-test
+  ref:
+    branch: main
+  # Only the manifests are deployed. k8s/optional/ (the Ingress) stays opt-in, as with
+  # kubectl apply -f k8s/.
+  ignore: |
+    /*
+    !/k8s/
+    /k8s/optional/

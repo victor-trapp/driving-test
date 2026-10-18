@@ -15,3 +15,4 @@ coverage
 k8s
 Dockerfile
 .dockerignore
+deploy

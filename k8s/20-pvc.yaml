@@ -3,6 +3,9 @@ kind: PersistentVolumeClaim
 metadata:
   name: driving-theory-data
   namespace: driving-theory
+  annotations:
+    # Flux must never delete this, even if it's removed from git: it holds the database.
+    kustomize.toolkit.fluxcd.io/prune: disabled
   labels:
     app.kubernetes.io/name: driving-theory
 spec:

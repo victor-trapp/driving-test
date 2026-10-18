@@ -35,8 +35,10 @@ spec:
           type: RuntimeDefault
       containers:
         - name: app
-          # Built locally and loaded into the node's container runtime (see README).
-          image: driving-theory:1.0.0
+          # Published by CI on every push to main. The deploy job rewrites this line with
+          # the new tag and Flux applies it, so don't edit it by hand (see README).
+          image: ghcr.io/victor-trapp/driving-test:main-8cbed13
+          # Every build has its own tag, so the node never needs to re-check one it has.
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
