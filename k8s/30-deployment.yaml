@@ -37,7 +37,7 @@ spec:
         - name: app
           # Published by CI on every push to main. The deploy job rewrites this line with
           # the new tag and Flux applies it, so don't edit it by hand (see README).
-          image: ghcr.io/victor-trapp/driving-test:main-8cbed13
+          image: ghcr.io/victor-trapp/driving-test:main-b4f0f5c
           # Every build has its own tag, so the node never needs to re-check one it has.
           imagePullPolicy: IfNotPresent
           ports:
